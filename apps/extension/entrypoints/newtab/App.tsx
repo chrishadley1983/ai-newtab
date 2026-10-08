@@ -7,6 +7,8 @@ import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
 import { HomepagePreview } from "./components/HomepagePreview";
+import { LinkOverlay } from "./components/LinkOverlay";
+import { allowFramingInTab, asLinkMessage, opensAsTab } from "@/lib/link-overlay";
 import { SettingsModal } from "./components/SettingsModal";
 import { btn, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
@@ -30,6 +32,40 @@ export default function App() {
   const [viewProgress, setViewProgress] = useState(false);
   /** The error the user dismissed, so a stale banner doesn't linger. */
   const [dismissedError, setDismissedError] = useState<string | null>(null);
+
+  /** The link being read in the overlay, if any. */
+  const [reading, setReading] = useState<{ url: string; title: string } | null>(null);
+
+  // Links clicked inside the homepage frame arrive here (see HomepagePreview).
+  useEffect(() => {
+    const onMessage = async (e: MessageEvent) => {
+      const msg = asLinkMessage(e.data);
+      if (!msg) return;
+      if (msg.kind === "close-overlay") {
+        setReading(null);
+        return;
+      }
+      if (msg.kind === "open-tab") {
+        await browser.tabs.create({ url: msg.url, active: false });
+        return;
+      }
+      if (opensAsTab(msg.url)) {
+        await browser.tabs.create({ url: msg.url });
+        return;
+      }
+      try {
+        const tab = await browser.tabs.getCurrent();
+        if (tab?.id !== undefined) await allowFramingInTab(tab.id);
+      } catch (err) {
+        console.warn("[overlay] could not relax framing headers", err);
+      }
+      setReading({ url: msg.url, title: msg.title });
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  const closeReading = useCallback(() => setReading(null), []);
 
   const { state, build, cancel } = useHomepageBuild((code) => setRenderedCode(toRenderable(code)));
 
@@ -221,6 +257,18 @@ export default function App() {
       )}
 
       <HomepagePreview code={renderedCode} />
+
+      {reading && (
+        <LinkOverlay
+          url={reading.url}
+          title={reading.title}
+          onClose={closeReading}
+          onOpenTab={() => {
+            void browser.tabs.create({ url: reading.url });
+            setReading(null);
+          }}
+        />
+      )}
 
       {showSettings && (
         <SettingsModal
