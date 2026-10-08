@@ -23,9 +23,9 @@ import {
   ensureEnvironment,
   runHomepageBuild,
 } from "@homepage/agent-core";
-import { FileKVStore, STATE_PATH, nodeBridge } from "./node-bridge";
+import { FileKVStore, STATE_PATH, nodeBridge, harnessClientOptions } from "./node-bridge";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+const client = new Anthropic(harnessClientOptions());
 const store = new FileKVStore(STATE_PATH);
 
 async function crash(): Promise<never> {

@@ -24,7 +24,21 @@ export interface AutoRebuildInput {
   /** ISO timestamp of the last auto-build attempt, if any. */
   lastAutoAttemptTimestamp?: string | null;
   intervalMs: number;
+  /** "HH:MM" local time. When set, rebuild once a day after it instead of on the interval. */
+  dailyAt?: string | null;
   now: Date;
+}
+
+/** Today's `HH:MM` as a Date, or null when unset/invalid. */
+export function dailyCutoff(dailyAt: string | null | undefined, now: Date): Date | null {
+  const m = dailyAt?.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  const cutoff = new Date(now);
+  cutoff.setHours(h, min, 0, 0);
+  return cutoff;
 }
 
 /**
@@ -39,6 +53,16 @@ export function shouldAutoRebuild(input: AutoRebuildInput): boolean {
     input;
 
   if (!enabled || !hasApiKey || isRunning || !lastBuildTimestamp) return false;
+
+  // Daily mode: one build per day, once the cutoff has passed. An attempt after
+  // today's cutoff (success or not) counts, so a failure waits until tomorrow.
+  const cutoff = dailyCutoff(input.dailyAt, now);
+  if (cutoff) {
+    if (now < cutoff) return false;
+    if (new Date(lastBuildTimestamp) >= cutoff) return false;
+    if (lastAutoAttemptTimestamp && new Date(lastAutoAttemptTimestamp) >= cutoff) return false;
+    return true;
+  }
 
   const age = (iso: string) => now.getTime() - new Date(iso).getTime();
   if (age(lastBuildTimestamp) < intervalMs) return false;

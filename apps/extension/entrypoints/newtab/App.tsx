@@ -18,6 +18,9 @@ export default function App() {
   const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
   const [autoRebuild, setAutoRebuild] = useState(true);
   const [intervalHours, setIntervalHours] = useState(DEFAULT_REBUILD_INTERVAL_HOURS);
+  const [dailyRebuildAt, setDailyRebuildAt] = useState("");
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [briefUrl, setBriefUrl] = useState("");
   /** Transpiled homepage, ready for Sandpack. */
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
   /** A session left mid-flight, offered as "Resume interrupted build". */
@@ -50,6 +53,9 @@ export default function App() {
         setModel(settings.model);
         setAutoRebuild(settings.autoRebuild);
         setIntervalHours(settings.rebuildIntervalHours ?? DEFAULT_REBUILD_INTERVAL_HOURS);
+        setDailyRebuildAt(settings.dailyRebuildAt);
+        setWorkspaceId(settings.workspaceId);
+        setBriefUrl(settings.briefUrl);
         setResumable(activeSession ?? null);
         if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
       } finally {
@@ -58,7 +64,9 @@ export default function App() {
     })();
   }, []);
 
-  const saveKey = useCallback(async (key: string) => {
+  const saveKey = useCallback(async (key: string, workspace: string) => {
+    await saveSetting("workspaceId", workspace);
+    setWorkspaceId(workspace);
     await saveSetting("apiKey", key);
     setApiKey(key);
   }, []);
@@ -86,6 +94,18 @@ export default function App() {
   const changeInterval = useCallback(async (next: number) => {
     setIntervalHours(next);
     await saveSetting("rebuildIntervalHours", next);
+  }, []);
+  const changeDailyRebuildAt = useCallback(async (next: string) => {
+    setDailyRebuildAt(next);
+    await saveSetting("dailyRebuildAt", next);
+  }, []);
+  const changeWorkspaceId = useCallback(async (next: string) => {
+    setWorkspaceId(next);
+    await saveSetting("workspaceId", next);
+  }, []);
+  const changeBriefUrl = useCallback(async (next: string) => {
+    setBriefUrl(next);
+    await saveSetting("briefUrl", next);
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center" }}>Loading…</div>;
@@ -211,6 +231,12 @@ export default function App() {
           onToggleAutoRebuild={toggleAutoRebuild}
           intervalHours={intervalHours}
           onChangeInterval={changeInterval}
+          dailyRebuildAt={dailyRebuildAt}
+          onChangeDailyRebuildAt={changeDailyRebuildAt}
+          workspaceId={workspaceId}
+          onChangeWorkspaceId={changeWorkspaceId}
+          briefUrl={briefUrl}
+          onChangeBriefUrl={changeBriefUrl}
           onClose={() => setShowSettings(false)}
           onSave={savePrompt}
         />

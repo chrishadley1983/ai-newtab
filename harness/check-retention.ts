@@ -6,8 +6,9 @@
  * Run: pnpm agent:retention [sessionId]   (sessionId is printed by pnpm agent:run)
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { harnessClientOptions } from "./node-bridge";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+const client = new Anthropic(harnessClientOptions());
 const sessionId = process.argv[2];
 
 let failures = 0;

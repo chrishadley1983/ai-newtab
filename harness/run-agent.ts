@@ -11,13 +11,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { runHomepageBuild } from "@homepage/agent-core";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { FileKVStore, OUT_DIR, OUT_PATH, STATE_PATH, nodeBridge } from "./node-bridge";
+import { FileKVStore, OUT_DIR, OUT_PATH, STATE_PATH, nodeBridge, harnessClientOptions } from "./node-bridge";
 
 async function main() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set (put it in .env)");
 
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic(harnessClientOptions());
   const store = new FileKVStore(STATE_PATH);
 
   mkdirSync(OUT_DIR, { recursive: true });

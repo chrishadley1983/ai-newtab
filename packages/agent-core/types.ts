@@ -79,6 +79,12 @@ export interface BrowserBridge {
     urls: string[];
     loadDelayMs?: number;
   }): Promise<{ pages: ScrapedPage[]; failed: Array<{ url: string; reason: string }> }>;
+
+  /**
+   * Optional: a curated brief from the user's own feed pipeline (pre-fetched news
+   * links, to-dos). Hosts without one leave it unset and the tool reports that.
+   */
+  getMorningBrief?(): Promise<unknown>;
 }
 
 /** Minimal persistence. `chrome.storage.local` in the extension, a JSON file in Node. */

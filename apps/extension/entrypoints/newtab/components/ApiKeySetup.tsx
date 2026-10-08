@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { btn } from "./ui";
 
-export function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
+export function ApiKeySetup({ onSave }: { onSave: (key: string, workspaceId: string) => void }) {
   const [value, setValue] = useState("");
-  const valid = value.trim().startsWith("sk-ant-");
+  const [workspace, setWorkspace] = useState("");
+  // User-scoped keys can't call the API without naming a workspace.
+  const needsWorkspace = value.trim().startsWith("sk-ant-usr-");
+  const valid =
+    value.trim().startsWith("sk-ant-") && (!needsWorkspace || workspace.trim().startsWith("wrkspc_"));
 
   return (
     <div style={{ maxWidth: 520, margin: "12vh auto", padding: 24, fontFamily: "system-ui" }}>
@@ -27,10 +31,30 @@ export function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
           fontFamily: "ui-monospace, monospace",
         }}
       />
+      {needsWorkspace && (
+        <>
+          <p style={{ color: "#555", lineHeight: 1.6, marginTop: 16 }}>
+            This is a user key, so it also needs a workspace ID (Console → Settings → Workspaces).
+          </p>
+          <input
+            value={workspace}
+            onChange={(e) => setWorkspace(e.target.value)}
+            placeholder="wrkspc_..."
+            style={{
+              width: "100%",
+              padding: 12,
+              fontSize: 14,
+              borderRadius: 4,
+              border: "1px solid #ddd",
+              fontFamily: "ui-monospace, monospace",
+            }}
+          />
+        </>
+      )}
       <button
         style={{ ...btn, marginTop: 16, opacity: valid ? 1 : 0.5 }}
         disabled={!valid}
-        onClick={() => onSave(value.trim())}
+        onClick={() => onSave(value.trim(), workspace.trim())}
       >
         Save key
       </button>

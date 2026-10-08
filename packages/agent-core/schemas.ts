@@ -55,6 +55,12 @@ export const GET_PAGE_HTML_SCHEMA: ToolInputSchema = {
   required: ["urls"],
 };
 
+export const GET_MORNING_BRIEF_SCHEMA: ToolInputSchema = {
+  type: "object",
+  properties: {},
+  required: [],
+};
+
 export const DEFAULTS = {
   daysToAnalyze: 14,
   maxResults: 30,

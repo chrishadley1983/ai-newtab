@@ -88,8 +88,14 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
    */
   const dispatch = async (event: CustomToolUse): Promise<void> => {
     try {
-      let result: GetHistoryResult | GetPageHtmlResult;
+      let result: unknown;
       switch (event.name) {
+        case "getMorningBrief":
+          if (!bridge.getMorningBrief) throw new Error("No morning brief is configured on this host.");
+          emit.phase("history", "morning brief");
+          result = await bridge.getMorningBrief();
+          emit.log("morning brief loaded");
+          break;
         case "getHistory":
           result = await runGetHistory(event, bridge, emit);
           break;

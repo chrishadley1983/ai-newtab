@@ -3,6 +3,16 @@ import { MODEL_CHOICES, type HomepageModel } from "@homepage/agent-core";
 import { REBUILD_INTERVAL_CHOICES } from "@/lib/auto-rebuild";
 import { btn } from "./ui";
 
+const field = { display: "flex", alignItems: "center", gap: 8, marginTop: 8, color: "#333", fontSize: 14 } as const;
+const textInput = {
+  flex: 1,
+  padding: "4px 8px",
+  fontSize: 13,
+  borderRadius: 4,
+  border: "1px solid #ddd",
+  fontFamily: "ui-monospace, monospace",
+} as const;
+
 export function SettingsModal({
   initialPrompt,
   model,
@@ -11,6 +21,12 @@ export function SettingsModal({
   onToggleAutoRebuild,
   intervalHours,
   onChangeInterval,
+  dailyRebuildAt,
+  onChangeDailyRebuildAt,
+  workspaceId,
+  onChangeWorkspaceId,
+  briefUrl,
+  onChangeBriefUrl,
   onClose,
   onSave,
 }: {
@@ -21,6 +37,12 @@ export function SettingsModal({
   onToggleAutoRebuild: (next: boolean) => void;
   intervalHours: number;
   onChangeInterval: (next: number) => void;
+  dailyRebuildAt: string;
+  onChangeDailyRebuildAt: (next: string) => void;
+  workspaceId: string;
+  onChangeWorkspaceId: (next: string) => void;
+  briefUrl: string;
+  onChangeBriefUrl: (next: string) => void;
   onClose: () => void;
   onSave: (prompt: string) => void;
 }) {
@@ -101,10 +123,19 @@ export function SettingsModal({
             fontSize: 14,
           }}
         >
-          Every
+          Daily at
+          <input
+            type="time"
+            value={dailyRebuildAt}
+            disabled={!autoRebuild}
+            onChange={(e) => onChangeDailyRebuildAt(e.target.value)}
+            style={{ padding: "4px 8px", fontSize: 14, borderRadius: 4, border: "1px solid #ddd" }}
+          />
+          <span style={{ color: "#888" }}>(clear it to use:)</span>
+          every
           <select
             value={intervalHours}
-            disabled={!autoRebuild}
+            disabled={!autoRebuild || Boolean(dailyRebuildAt)}
             onChange={(e) => onChangeInterval(Number(e.target.value))}
             style={{ padding: "4px 8px", fontSize: 14, borderRadius: 4, border: "1px solid #ddd" }}
           >
@@ -116,9 +147,28 @@ export function SettingsModal({
           </select>
         </label>
         <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
-          When on, the extension rebuilds in the background once your homepage is this old, so
-          your next tab shows a fresh one (uses your API key).
+          When on, the extension rebuilds in the background once a day after that time (or once
+          your homepage is the chosen age), so your next tab shows a fresh one (uses your API key).
         </p>
+        <h3 style={{ margin: "20px 0 4px", fontSize: 14, color: "#333" }}>Connections</h3>
+        <label style={field}>
+          Workspace ID
+          <input
+            value={workspaceId}
+            onChange={(e) => onChangeWorkspaceId(e.target.value.trim())}
+            placeholder="wrkspc_... (only for sk-ant-usr- keys)"
+            style={textInput}
+          />
+        </label>
+        <label style={field}>
+          Morning brief URL
+          <input
+            value={briefUrl}
+            onChange={(e) => onChangeBriefUrl(e.target.value.trim())}
+            placeholder="empty = off"
+            style={textInput}
+          />
+        </label>
         <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}

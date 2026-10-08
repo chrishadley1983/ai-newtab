@@ -121,6 +121,7 @@ export class BuildManager {
         lastBuildTimestamp: homepage?.timestamp,
         lastAutoAttemptTimestamp: lastAttempt,
         intervalMs: rebuildIntervalMs(settings.rebuildIntervalHours),
+        dailyAt: settings.dailyRebuildAt,
         now,
       })
     ) {
@@ -141,7 +142,7 @@ export class BuildManager {
       return; // single-flight: a second start just attaches.
     }
 
-    const { apiKey, systemPrompt, model } = await loadSettings();
+    const { apiKey, systemPrompt, model, workspaceId } = await loadSettings();
     if (!apiKey) {
       // Manual builds are gated behind the key-setup screen and auto-builds
       // require a key, so this only happens if the key was removed.
@@ -162,7 +163,12 @@ export class BuildManager {
     try {
       // The key is the user's own, read from local storage — there is no server
       // to hide it behind. See ARCHITECTURE.md → Privacy.
-      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+      const client = new Anthropic({
+        apiKey,
+        dangerouslyAllowBrowser: true,
+        // User-scoped keys (sk-ant-usr-) must name a workspace on every request.
+        defaultHeaders: workspaceId ? { "anthropic-workspace-id": workspaceId } : undefined,
+      });
 
       const resumeSessionId = opts.resume
         ? await extensionStore.get<string>(KEYS.activeSessionId)

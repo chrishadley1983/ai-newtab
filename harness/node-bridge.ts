@@ -96,7 +96,25 @@ function titleOf(html: string, url: string): string {
   return m ? m[1].trim().slice(0, 200) : url;
 }
 
+/** Same client the extension builds: adds the workspace header for user-scoped keys. */
+export function harnessClientOptions(): { apiKey: string; defaultHeaders?: Record<string, string> } {
+  const workspace = process.env.ANTHROPIC_WORKSPACE_ID;
+  return {
+    apiKey: process.env.ANTHROPIC_API_KEY!,
+    defaultHeaders: workspace ? { "anthropic-workspace-id": workspace } : undefined,
+  };
+}
+
 export const nodeBridge: BrowserBridge = {
+  // Only offered when HOMEPAGE_BRIEF_URL is set; otherwise the tool reports it isn't configured.
+  getMorningBrief: process.env.HOMEPAGE_BRIEF_URL
+    ? async () => {
+        const res = await fetch(process.env.HOMEPAGE_BRIEF_URL!, { signal: AbortSignal.timeout(60_000) });
+        if (!res.ok) throw new Error(`Morning brief returned HTTP ${res.status}`);
+        return res.json();
+      }
+    : undefined,
+
   async getHistory() {
     const sites = fixtureHistory();
     return { sites, totalSitesSeen: sites.length };

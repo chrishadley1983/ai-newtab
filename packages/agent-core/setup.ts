@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { HOMEPAGE_SYSTEM_PROMPT } from "./prompt";
-import { GET_HISTORY_SCHEMA, GET_PAGE_HTML_SCHEMA } from "./schemas";
+import { GET_HISTORY_SCHEMA, GET_MORNING_BRIEF_SCHEMA, GET_PAGE_HTML_SCHEMA } from "./schemas";
 import type { KVStore } from "./types";
 
 /** Models offered in Settings. The first is the default. */
@@ -19,8 +19,14 @@ export const DEFAULT_MODEL: HomepageModel = "claude-sonnet-5-5";
  * Switching back and forth reuses them instead of provisioning a new one per switch.
  */
 export function agentIdKey(model: HomepageModel): string {
-  return `agentId-${model.replace(/^claude-/, "")}`;
+  return `agentId-${model.replace(/^claude-/, "")}-r${AGENT_REVISION}`;
 }
+
+/**
+ * Bump when the system prompt or tool list changes. An agent is created once and
+ * cached, so without this a changed prompt never reaches an existing install.
+ */
+export const AGENT_REVISION = 2;
 
 export const STORAGE_KEYS = {
   apiKey: "apiKey",
@@ -125,6 +131,15 @@ export async function ensureAgent(
           "Prefer this over any web fetch: it sees authenticated, JavaScript-rendered " +
           "pages that an anonymous fetch cannot.",
         input_schema: GET_PAGE_HTML_SCHEMA,
+      },
+      {
+        type: "custom",
+        name: "getMorningBrief",
+        description:
+          "Returns the user's own curated morning brief: pre-fetched, already-deduplicated " +
+          "news links grouped by section (AI news, Claude Code, community, tech, UK, sport, " +
+          "YouTube) plus the to-dos that matter today. Call this once, before getHistory.",
+        input_schema: GET_MORNING_BRIEF_SCHEMA,
       },
     ],
   });

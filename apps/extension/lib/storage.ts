@@ -23,7 +23,17 @@ export const KEYS = {
   rebuildIntervalHours: "autoRebuildIntervalHours",
   /** Throttled mirror of the live build state, for tabs that open while the worker sleeps. */
   buildSnapshot: "buildSnapshot",
+  /** Sent as `anthropic-workspace-id`; required by user-scoped (sk-ant-usr-) keys. */
+  workspaceId: "workspaceId",
+  /** Where getMorningBrief fetches the curated brief from. Empty = tool disabled. */
+  briefUrl: "briefUrl",
+  /** "HH:MM" local time for the daily rebuild. Empty = use the hourly interval. */
+  dailyRebuildAt: "dailyRebuildAt",
 } as const;
+
+export const DEFAULT_BRIEF_URL = "http://localhost:8100/homepage/brief";
+/** After the 07:01 newsletter fetch has landed. */
+export const DEFAULT_DAILY_REBUILD_AT = "07:15";
 
 export interface Homepage {
   /** The agent's raw TSX source. */
@@ -39,7 +49,12 @@ export interface Settings {
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
   rebuildIntervalHours: number | null;
+  workspaceId: string;
+  briefUrl: string;
+  dailyRebuildAt: string;
 }
+
+type SettingKey = keyof Settings;
 
 /** The `KVStore` agent-core persists its agent/environment/session IDs through. */
 export const extensionStore: KVStore = {
@@ -62,6 +77,9 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.model,
     KEYS.autoRebuild,
     KEYS.rebuildIntervalHours,
+    KEYS.workspaceId,
+    KEYS.briefUrl,
+    KEYS.dailyRebuildAt,
   ]);
   const model = s[KEYS.model] as string | undefined;
   return {
@@ -71,10 +89,14 @@ export async function loadSettings(): Promise<Settings> {
     model: MODEL_CHOICES.find((m) => m.id === model)?.id ?? DEFAULT_MODEL,
     autoRebuild: s[KEYS.autoRebuild] !== false,
     rebuildIntervalHours: (s[KEYS.rebuildIntervalHours] as number | undefined) ?? null,
+    workspaceId: (s[KEYS.workspaceId] as string | undefined) ?? "",
+    // Unset means the default; a saved empty string means deliberately off.
+    briefUrl: (s[KEYS.briefUrl] as string | undefined) ?? DEFAULT_BRIEF_URL,
+    dailyRebuildAt: (s[KEYS.dailyRebuildAt] as string | undefined) ?? DEFAULT_DAILY_REBUILD_AT,
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "model" | "autoRebuild" | "rebuildIntervalHours">(
+export async function saveSetting<K extends SettingKey>(
   key: K,
   value: Settings[K],
 ): Promise<void> {
