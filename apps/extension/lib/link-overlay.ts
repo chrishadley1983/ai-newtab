@@ -43,25 +43,50 @@ export function opensAsTab(url: string): boolean {
 
 /** One rule id per tab, so several open new tabs don't overwrite each other. */
 const RULE_ID_BASE = 1000;
+/** The service-worker rule for whichever site the overlay is showing. */
+const SW_RULE_ID = 999;
 
-/** Let sites load in frames inside this tab only. Idempotent. */
-export async function allowFramingInTab(tabId: number): Promise<void> {
+const FRAME_BLOCKING_HEADERS = [
+  { header: "x-frame-options", operation: "remove" },
+  { header: "content-security-policy", operation: "remove" },
+] as Browser.declarativeNetRequest.ModifyHeaderInfo[];
+
+/**
+ * Let `url` load in a frame inside this tab. Idempotent.
+ *
+ * Two rules: the tab's own sub-frame requests, and the site's service worker.
+ * Sites like YouTube serve navigations from a service worker once you've visited
+ * them; that fetch belongs to no tab, so the tab rule never sees it and the
+ * frame is refused. The service-worker rule is limited to the overlay's site and
+ * is removed again when the overlay closes.
+ */
+export async function allowFramingInTab(tabId: number, url: string): Promise<void> {
   const id = RULE_ID_BASE + (tabId % 1_000_000);
+  const host = new URL(url).hostname;
   await browser.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: [id],
+    removeRuleIds: [id, SW_RULE_ID],
     addRules: [
       {
         id,
         priority: 1,
-        action: {
-          type: "modifyHeaders",
-          responseHeaders: [
-            { header: "x-frame-options", operation: "remove" },
-            { header: "content-security-policy", operation: "remove" },
-          ],
-        },
+        action: { type: "modifyHeaders", responseHeaders: FRAME_BLOCKING_HEADERS },
         condition: { tabIds: [tabId], resourceTypes: ["sub_frame"] },
+      },
+      {
+        id: SW_RULE_ID,
+        priority: 1,
+        action: { type: "modifyHeaders", responseHeaders: FRAME_BLOCKING_HEADERS },
+        condition: {
+          tabIds: [-1], // requests made by no tab, e.g. a service worker
+          requestDomains: [host],
+          excludedResourceTypes: ["main_frame"],
+        },
       },
     ],
   });
+}
+
+/** Drop the service-worker rule once nothing is being read. */
+export async function endFraming(): Promise<void> {
+  await browser.declarativeNetRequest.updateSessionRules({ removeRuleIds: [SW_RULE_ID] });
 }
