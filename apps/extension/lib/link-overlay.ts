@@ -1,12 +1,12 @@
 /**
- * Reading overlay: links clicked on the homepage open in a framed panel over
- * the new tab instead of navigating away.
+ * Reading overlay: articles clicked on the homepage open as a reader view in a
+ * panel over the new tab; everything else opens in a new tab.
  *
- * Many sites (YouTube, X, the Guardian…) forbid framing with X-Frame-Options or
- * CSP frame-ancestors. A session rule scoped to THIS tab only strips those
- * headers from sub-frames, so ordinary browsing is untouched. YouTube is framed
- * as the normal watch page: its embed player refuses to play inside an extension
- * page (errors 152/153), even for embeddable videos.
+ * Framing the live site was tried and dropped: in a real profile sites break in
+ * frames in a different way each (YouTube's service worker and then a renderer
+ * crash, consent banners that blank the page, X never renders). A reader view
+ * built from the fetched HTML has none of that, so only pages that extract well
+ * stay in the panel.
  */
 
 /** Tag on the postMessage from the homepage frame, so stray messages are ignored. */
@@ -29,64 +29,33 @@ export function asLinkMessage(data: unknown): LinkMessage | null {
   return { source: m.source, kind: m.kind, url: m.url, title: typeof m.title === "string" ? m.title : "" };
 }
 
-/** Sites that render blank inside any frame, even with the headers stripped: open these as tabs. */
-const OPEN_AS_TAB_HOSTS = ["x.com", "twitter.com"];
+/** Video, social and app-like sites: no article to extract, open these as tabs. */
+const OPEN_AS_TAB_HOSTS = [
+  "youtube.com",
+  "youtu.be",
+  "vimeo.com",
+  "twitch.tv",
+  "tiktok.com",
+  "x.com",
+  "twitter.com",
+  "instagram.com",
+  "facebook.com",
+  "reddit.com",
+  "linkedin.com",
+  "github.com",
+  "spotify.com",
+];
+
+/** Live blogs and scorecards update in place, so a one-off snapshot is no use. */
+const LIVE_PATH = /(^|[/_-])(live|scorecard)([/_-]|$)/i;
 
 export function opensAsTab(url: string): boolean {
   try {
-    const host = new URL(url).hostname.replace(/^(www\.|mobile\.)/, "");
-    return OPEN_AS_TAB_HOSTS.some((h) => host === h || host.endsWith("." + h));
+    const u = new URL(url);
+    const host = u.hostname.replace(/^(www\.|mobile\.|m\.)/, "");
+    if (OPEN_AS_TAB_HOSTS.some((h) => host === h || host.endsWith("." + h))) return true;
+    return LIVE_PATH.test(u.pathname);
   } catch {
     return false;
   }
-}
-
-/** One rule id per tab, so several open new tabs don't overwrite each other. */
-const RULE_ID_BASE = 1000;
-/** The service-worker rule for whichever site the overlay is showing. */
-const SW_RULE_ID = 999;
-
-const FRAME_BLOCKING_HEADERS = [
-  { header: "x-frame-options", operation: "remove" },
-  { header: "content-security-policy", operation: "remove" },
-] as Browser.declarativeNetRequest.ModifyHeaderInfo[];
-
-/**
- * Let `url` load in a frame inside this tab. Idempotent.
- *
- * Two rules: the tab's own sub-frame requests, and the site's service worker.
- * Sites like YouTube serve navigations from a service worker once you've visited
- * them; that fetch belongs to no tab, so the tab rule never sees it and the
- * frame is refused. The service-worker rule is limited to the overlay's site and
- * is removed again when the overlay closes.
- */
-export async function allowFramingInTab(tabId: number, url: string): Promise<void> {
-  const id = RULE_ID_BASE + (tabId % 1_000_000);
-  const host = new URL(url).hostname;
-  await browser.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: [id, SW_RULE_ID],
-    addRules: [
-      {
-        id,
-        priority: 1,
-        action: { type: "modifyHeaders", responseHeaders: FRAME_BLOCKING_HEADERS },
-        condition: { tabIds: [tabId], resourceTypes: ["sub_frame"] },
-      },
-      {
-        id: SW_RULE_ID,
-        priority: 1,
-        action: { type: "modifyHeaders", responseHeaders: FRAME_BLOCKING_HEADERS },
-        condition: {
-          tabIds: [-1], // requests made by no tab, e.g. a service worker
-          requestDomains: [host],
-          excludedResourceTypes: ["main_frame"],
-        },
-      },
-    ],
-  });
-}
-
-/** Drop the service-worker rule once nothing is being read. */
-export async function endFraming(): Promise<void> {
-  await browser.declarativeNetRequest.updateSessionRules({ removeRuleIds: [SW_RULE_ID] });
 }

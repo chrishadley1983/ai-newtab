@@ -8,7 +8,7 @@ import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
 import { HomepagePreview } from "./components/HomepagePreview";
 import { LinkOverlay } from "./components/LinkOverlay";
-import { allowFramingInTab, asLinkMessage, endFraming, opensAsTab } from "@/lib/link-overlay";
+import { asLinkMessage, opensAsTab } from "@/lib/link-overlay";
 import { SettingsModal } from "./components/SettingsModal";
 import { btn, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
@@ -36,10 +36,7 @@ export default function App() {
   /** The link being read in the overlay, if any. */
   const [reading, setReading] = useState<{ url: string; title: string } | null>(null);
 
-  const closeReading = useCallback(() => {
-    setReading(null);
-    endFraming().catch(() => {});
-  }, []);
+  const closeReading = useCallback(() => setReading(null), []);
 
   // Links clicked inside the homepage frame arrive here (see HomepagePreview).
   useEffect(() => {
@@ -57,12 +54,6 @@ export default function App() {
       if (opensAsTab(msg.url)) {
         await browser.tabs.create({ url: msg.url });
         return;
-      }
-      try {
-        const tab = await browser.tabs.getCurrent();
-        if (tab?.id !== undefined) await allowFramingInTab(tab.id, msg.url);
-      } catch (err) {
-        console.warn("[overlay] could not relax framing headers", err);
       }
       setReading({ url: msg.url, title: msg.title });
     };
@@ -268,6 +259,10 @@ export default function App() {
           title={reading.title}
           onClose={closeReading}
           onOpenTab={() => {
+            void browser.tabs.create({ url: reading.url });
+            setReading(null);
+          }}
+          onFallback={() => {
             void browser.tabs.create({ url: reading.url });
             setReading(null);
           }}

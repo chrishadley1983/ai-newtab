@@ -23,6 +23,9 @@ importers:
       '@homepage/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
+      '@mozilla/readability':
+        specifier: ^0.6.0
+        version: 0.6.0
       react:
         specifier: ^19.1.0
         version: 19.3.0
@@ -396,6 +399,10 @@ packages:
 
   '@marijn/find-cluster-break@1.0.4':
     resolution: {integrity: sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ==}
+
+  '@mozilla/readability@0.6.0':
+    resolution: {integrity: sha512-juG5VWh4qAivzTAeMzvY9xs9HY5rAcr2E4I7tiSSCokRFi7XIZCAu92ZkSTsIj1OPceCifL3cpfteP3pDT9/QQ==}
+    engines: {node: '>=14.0.0'}
 
   '@open-draft/deferred-promise@2.2.0':
     resolution: {integrity: sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA==}
@@ -2399,6 +2406,8 @@ snapshots:
       '@lezer/common': 1.5.3
 
   '@marijn/find-cluster-break@1.0.4': {}
+
+  '@mozilla/readability@0.6.0': {}
 
   '@open-draft/deferred-promise@2.2.0': {}
 
