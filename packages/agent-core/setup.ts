@@ -26,7 +26,7 @@ export function agentIdKey(model: HomepageModel): string {
  * Bump when the system prompt or tool list changes. An agent is created once and
  * cached, so without this a changed prompt never reaches an existing install.
  */
-export const AGENT_REVISION = 2;
+export const AGENT_REVISION = 3;
 
 export const STORAGE_KEYS = {
   apiKey: "apiKey",
@@ -138,7 +138,8 @@ export async function ensureAgent(
         description:
           "Returns the user's own curated morning brief: pre-fetched, already-deduplicated " +
           "news links grouped by section (AI news, Claude Code, community, tech, UK, sport, " +
-          "YouTube) plus the to-dos that matter today. Call this once, before getHistory.",
+          "YouTube), the to-dos that matter today, and personal countdowns (days to go). " +
+          "Call this once, before getHistory.",
         input_schema: GET_MORNING_BRIEF_SCHEMA,
       },
     ],
